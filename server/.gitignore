@@ -1,0 +1,7 @@
+# compiled binary
+nanoscope
+
+# sqlite store (plus WAL sidecars)
+*.db
+*.db-wal
+*.db-shm

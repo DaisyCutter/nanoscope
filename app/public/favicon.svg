@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0b1119"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="10.5" fill="none" stroke="#1d4f60" stroke-width="3"/>
+  <!-- scope reticle -->
+  <circle cx="32" cy="32" r="17" fill="none" stroke="#5ef2ff" stroke-width="4"/>
+  <!-- crosshair ticks -->
+  <g stroke="#5ef2ff" stroke-width="4" stroke-linecap="round">
+    <line x1="32" y1="7" x2="32" y2="15"/>
+    <line x1="32" y1="49" x2="32" y2="57"/>
+    <line x1="7" y1="32" x2="15" y2="32"/>
+    <line x1="49" y1="32" x2="57" y2="32"/>
+  </g>
+  <!-- signal blip -->
+  <circle cx="32" cy="32" r="6" fill="#ff5ec8"/>
+</svg>

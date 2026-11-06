@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+dist/
+
+# Local configuration and secrets (only examples are committed)
+.env
+.env.*
+!.env.example
+
+# Machine-specific agent settings and caches
+.claude/
+.trail/

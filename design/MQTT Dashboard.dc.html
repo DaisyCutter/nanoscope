@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#06080b; }
+  * { box-sizing:border-box; }
+  a { color:#5ef2ff; text-decoration:none; }
+  a:hover { color:#b4faff; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#1b2531; border-radius:0; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  @keyframes rowInA { from { opacity:0; transform:translateY(-6px); background:rgba(94,242,255,.14);} to { opacity:1; transform:none; background:transparent;} }
+  @keyframes rowInB { from { opacity:0; transform:translateY(-6px); background:rgba(94,242,255,.14);} to { opacity:1; transform:none; background:transparent;} }
+  @keyframes blip { 0%,100% { opacity:1; box-shadow:0 0 6px currentColor;} 50% { opacity:.28; box-shadow:0 0 0 currentColor;} }
+  @keyframes sweep { from { transform:translateX(-100%);} to { transform:translateX(100%);} }
+</style>
+</helmet>
+<div style="height:100vh;min-height:640px;min-width:1200px;display:grid;grid-template-rows:40px auto 1fr;background:#06080b;color:#c8d4e2;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.01em;overflow:hidden">
+
+  <header style="display:flex;align-items:center;gap:14px;padding:0 12px;border-bottom:1px solid #121a24;background:linear-gradient(180deg,#0a0e14,#070a0f)">
+    <div style="display:flex;align-items:baseline;gap:7px">
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;letter-spacing:.14em;color:#5ef2ff;text-shadow:0 0 14px rgba(94,242,255,.45)">NANOSCOPE</span>
+      <span style="color:#3d4d5f;font-size:9px;letter-spacing:.18em">MQTT&nbsp;5.0</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid #16303c;background:#0a141a;color:#7fe9ff">
+      <span style="width:5px;height:5px;border-radius:50%;background:#4dff9f;color:#4dff9f;animation:blip 1.6s ease-in-out infinite"></span>
+      <span>nanomq://edge-01.fleet.internal:1883</span>
+      <span style="color:#31485a">|</span>
+      <span style="color:#4a6076">TLS</span>
+    </div>
+    <nav style="display:flex;gap:2px;margin-left:auto">
+      <button onClick="{{ goStream }}" style="{{ tabStyleStream }}" style-hover="color:#dff6ff">STREAM</button>
+      <button onClick="{{ goTopics }}" style="{{ tabStyleTopics }}" style-hover="color:#dff6ff">TOPICS</button>
+      <button onClick="{{ goClients }}" style="{{ tabStyleClients }}" style-hover="color:#dff6ff">CLIENTS</button>
+      <button onClick="{{ goPublish }}" style="{{ tabStylePublish }}" style-hover="color:#dff6ff">PUBLISH</button>
+    </nav>
+    <div style="display:flex;align-items:center;gap:10px;color:#4a6076;font-size:10px">
+      <span>up {{ uptime }}</span>
+      <span style="color:#1c2836">/</span>
+      <span style="color:#9fb2c6">{{ clock }}</span>
+    </div>
+  </header>
+
+  <section style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#111925;border-bottom:1px solid #121a24">
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">MSG / SEC</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;margin-top:3px">
+        <span style="font-size:19px;font-weight:500;color:#5ef2ff;line-height:1">{{ rate }}</span>
+        <svg width="96" height="20" viewBox="0 0 96 20" preserveAspectRatio="none" style="margin-bottom:2px;overflow:visible">
+          <polyline points="{{ sparkRate }}" fill="none" stroke="#5ef2ff" stroke-width="1" opacity="0.85"></polyline>
+        </svg>
+      </div>
+    </div>
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">TOTAL RECEIVED</div>
+      <div style="font-size:19px;font-weight:500;color:#dbe8f5;line-height:1;margin-top:5px">{{ total }}</div>
+    </div>
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">TOPICS ACTIVE</div>
+      <div style="font-size:19px;font-weight:500;color:#dbe8f5;line-height:1;margin-top:5px">{{ topicCount }}<span style="font-size:10px;color:#3d4d5f"> / 418</span></div>
+    </div>
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">CLIENTS</div>
+      <div style="font-size:19px;font-weight:500;color:#b6ff5c;line-height:1;margin-top:5px">142<span style="font-size:10px;color:#3d4d5f"> conn</span></div>
+    </div>
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">INFLIGHT / QUEUED</div>
+      <div style="font-size:19px;font-weight:500;color:#dbe8f5;line-height:1;margin-top:5px">{{ inflight }}<span style="font-size:10px;color:#3d4d5f"> / {{ queued }}</span></div>
+    </div>
+    <div style="background:#080b10;padding:7px 10px">
+      <div style="color:#42566a;font-size:9px;letter-spacing:.16em">DROPPED (1h)</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;margin-top:3px">
+        <span style="font-size:19px;font-weight:500;color:#ff5ec8;line-height:1">7</span>
+        <svg width="96" height="20" viewBox="0 0 96 20" preserveAspectRatio="none" style="margin-bottom:2px;overflow:visible">
+          <polyline points="{{ sparkDrop }}" fill="none" stroke="#ff5ec8" stroke-width="1" opacity="0.7"></polyline>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <main style="display:grid;grid-template-columns:250px 1fr 340px;gap:1px;background:#111925;overflow:hidden">
+
+    <aside style="background:#080b10;display:grid;grid-template-rows:auto 1fr auto auto;overflow:hidden">
+      <div style="padding:7px 8px;border-bottom:1px solid #101823;display:flex;align-items:center;gap:6px">
+        <span style="color:#31485a">▸</span>
+        <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="filter topics  fleet/+/temp" style="flex:1;background:#0b1119;border:1px solid #15202c;color:#cfe0f0;font-family:inherit;font-size:10px;padding:4px 6px;outline:none" style-focus="border-color:#1d4f60" />
+      </div>
+      <div style="overflow-y:auto;padding:4px 0">
+        <sc-for list="{{ treeRows }}" as="row" hint-placeholder-count="14">
+          <div onClick="{{ row.onClick }}" style="{{ row.style }}" style-hover="background:#0d1621">
+            <span style="width:9px;color:#33475a;flex:none">{{ row.caret }}</span>
+            <span style="{{ row.dotStyle }}"></span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ row.label }}</span>
+            <span style="color:#37485a;font-size:9px;flex:none">{{ row.count }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid #101823;padding:7px 8px">
+        <div style="color:#42566a;font-size:9px;letter-spacing:.16em;margin-bottom:5px">SAVED FILTERS</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <sc-for list="{{ savedFilters }}" as="f" hint-placeholder-count="4">
+            <div onClick="{{ f.onClick }}" style="{{ f.style }}" style-hover="border-color:#1d4f60;color:#cfe0f0">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.expr }}</span>
+              <span style="color:#37485a;font-size:9px;flex:none">{{ f.hits }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border-top:1px solid #101823;padding:7px 8px">
+        <div style="color:#42566a;font-size:9px;letter-spacing:.16em;margin-bottom:5px">ALERT RULES</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="{{ a.dotStyle }}"></span>
+              <span style="flex:1;color:#8ba0b5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+              <span style="{{ a.badgeStyle }}">{{ a.state }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+
+    <section style="background:#080b10;display:grid;grid-template-rows:auto 1fr;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid #101823;flex-wrap:wrap">
+        <span style="color:#5ef2ff;font-size:9px;letter-spacing:.16em">{{ scopeLabel }}</span>
+        <span style="color:#1c2836">│</span>
+        <sc-for list="{{ qosChips }}" as="c" hint-placeholder-count="3">
+          <button onClick="{{ c.onClick }}" style="{{ c.style }}" style-hover="border-color:#1d4f60">{{ c.label }}</button>
+        </sc-for>
+        <button onClick="{{ toggleRetained }}" style="{{ retainedStyle }}" style-hover="border-color:#1d4f60">RETAINED</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+          <span style="color:#37485a;font-size:9px">{{ shownCount }} shown</span>
+          <button onClick="{{ clearLog }}" style="background:transparent;border:1px solid #15202c;color:#5c7086;font-family:inherit;font-size:9px;letter-spacing:.12em;padding:3px 8px;cursor:pointer" style-hover="border-color:#1d4f60;color:#cfe0f0">CLEAR</button>
+          <button onClick="{{ togglePause }}" style="{{ pauseStyle }}" style-hover="filter:brightness(1.2)">{{ pauseLabel }}</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ isStream }}" hint-placeholder-val="{{ true }}">
+        <div style="overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+          <div style="display:grid;grid-template-columns:92px 34px 26px 1fr 62px;gap:8px;padding:4px 10px;border-bottom:1px solid #101823;color:#3a4c5e;font-size:9px;letter-spacing:.14em;background:#0a0e14">
+            <span>TIME</span><span>QOS</span><span>R</span><span>TOPIC · PAYLOAD</span><span style="text-align:right">BYTES</span>
+          </div>
+          <div style="overflow-y:auto">
+            <sc-for list="{{ visibleMessages }}" as="m" hint-placeholder-count="18">
+              <div onClick="{{ m.onClick }}" style="{{ m.style }}" style-hover="background:#0e1826">
+                <span style="color:#556c82">{{ m.time }}</span>
+                <span style="{{ m.qosStyle }}">{{ m.qos }}</span>
+                <span style="{{ m.retainStyle }}">{{ m.retainMark }}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  <span style="color:#7fe9ff">{{ m.topic }}</span>
+                  <span style="color:#26374a"> ▸ </span>
+                  <span style="color:#93a8bd">{{ m.preview }}</span>
+                </span>
+                <span style="color:#3a4c5e;text-align:right">{{ m.bytes }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTopics }}" hint-placeholder-val="{{ true }}">
+        <div style="overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+          <div style="display:grid;grid-template-columns:1fr 42px 34px 66px 104px 78px;gap:8px;padding:4px 10px;border-bottom:1px solid #101823;color:#3a4c5e;font-size:9px;letter-spacing:.14em;background:#0a0e14">
+            <span>TOPIC</span><span>QOS</span><span>RET</span><span style="text-align:right">MSG/MIN</span><span>THROUGHPUT 5m</span><span style="text-align:right">LAST SEEN</span>
+          </div>
+          <div style="overflow-y:auto">
+            <sc-for list="{{ topicRows }}" as="t" hint-placeholder-count="16">
+              <div onClick="{{ t.onClick }}" style="{{ t.style }}" style-hover="background:#0e1826">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a8bdd2">{{ t.path }}</span>
+                <span style="{{ t.qosStyle }}">{{ t.qos }}</span>
+                <span style="{{ t.retainStyle }}">{{ t.retainMark }}</span>
+                <span style="text-align:right;color:#dbe8f5">{{ t.rate }}</span>
+                <svg width="104" height="14" viewBox="0 0 104 14" preserveAspectRatio="none" style="overflow:visible">
+                  <polyline points="{{ t.spark }}" fill="none" stroke="#5ef2ff" stroke-width="1" opacity="0.75"></polyline>
+                </svg>
+                <span style="text-align:right;color:#4d6379">{{ t.last }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isClients }}" hint-placeholder-val="{{ true }}">
+        <div style="overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+          <div style="display:grid;grid-template-columns:1fr 118px 52px 60px 62px 70px;gap:8px;padding:4px 10px;border-bottom:1px solid #101823;color:#3a4c5e;font-size:9px;letter-spacing:.14em;background:#0a0e14">
+            <span>CLIENT ID</span><span>ADDRESS</span><span>SUBS</span><span style="text-align:right">TX/RX</span><span>KEEPALIVE</span><span style="text-align:right">STATE</span>
+          </div>
+          <div style="overflow-y:auto">
+            <sc-for list="{{ clients }}" as="c" hint-placeholder-count="12">
+              <div style="display:grid;grid-template-columns:1fr 118px 52px 60px 62px 70px;gap:8px;padding:4px 10px;border-bottom:1px solid #0c1420" style-hover="background:#0e1826">
+                <span style="color:#a8bdd2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.id }}</span>
+                <span style="color:#556c82">{{ c.addr }}</span>
+                <span style="color:#8ba0b5">{{ c.subs }}</span>
+                <span style="text-align:right;color:#8ba0b5">{{ c.io }}</span>
+                <span style="color:#556c82">{{ c.keepalive }}</span>
+                <span style="{{ c.stateStyle }}">{{ c.state }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPublish }}" hint-placeholder-val="{{ true }}">
+        <div style="overflow-y:auto;padding:14px;display:grid;gap:12px;align-content:start;max-width:720px">
+          <div>
+            <div style="color:#42566a;font-size:9px;letter-spacing:.16em;margin-bottom:4px">TOPIC</div>
+            <input value="{{ pubTopic }}" onChange="{{ onPubTopic }}" style="width:100%;background:#0b1119;border:1px solid #15202c;color:#7fe9ff;font-family:inherit;font-size:11px;padding:6px 8px;outline:none" style-focus="border-color:#1d4f60" />
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,auto) 1fr;gap:16px;align-items:center">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="color:#42566a;font-size:9px;letter-spacing:.16em">QOS</span>
+              <sc-for list="{{ pubQosChips }}" as="q" hint-placeholder-count="3">
+                <button onClick="{{ q.onClick }}" style="{{ q.style }}" style-hover="border-color:#1d4f60">{{ q.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ togglePubRetain }}" style="{{ pubRetainStyle }}" style-hover="border-color:#1d4f60">RETAIN</button>
+            <span style="color:#42566a;font-size:9px;letter-spacing:.16em">{{ pubBytes }} BYTES</span>
+          </div>
+          <div>
+            <div style="color:#42566a;font-size:9px;letter-spacing:.16em;margin-bottom:4px">PAYLOAD · JSON</div>
+            <textarea value="{{ pubBody }}" onChange="{{ onPubBody }}" spellcheck="false" style="width:100%;height:190px;background:#0b1119;border:1px solid #15202c;color:#b6ff5c;font-family:inherit;font-size:11px;line-height:1.6;padding:8px;outline:none;resize:vertical" style-focus="border-color:#1d4f60"></textarea>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{ doPublish }}" style="background:#0d2b33;border:1px solid #1d6b7d;color:#7fe9ff;font-family:inherit;font-size:10px;letter-spacing:.18em;padding:7px 20px;cursor:pointer;box-shadow:0 0 18px rgba(94,242,255,.18)" style-hover="background:#12414d">PUBLISH ▸</button>
+            <span style="color:#4dff9f;font-size:10px">{{ pubStatus }}</span>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+
+    <aside style="background:#080b10;display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden">
+      <div style="padding:7px 10px;border-bottom:1px solid #101823;display:flex;align-items:center;justify-content:space-between">
+        <span style="color:#5ef2ff;font-size:9px;letter-spacing:.16em">PAYLOAD INSPECTOR</span>
+        <span style="color:#37485a;font-size:9px">{{ selMeta.id }}</span>
+      </div>
+      <div style="padding:8px 10px;border-bottom:1px solid #101823;display:grid;gap:4px">
+        <div style="color:#7fe9ff;word-break:break-all;line-height:1.5">{{ selMeta.topic }}</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;color:#4d6379;font-size:10px">
+          <span>received</span><span style="color:#a8bdd2">{{ selMeta.time }}</span>
+          <span>qos</span><span style="color:#a8bdd2">{{ selMeta.qos }}</span>
+          <span>retain</span><span style="color:#a8bdd2">{{ selMeta.retain }}</span>
+          <span>bytes</span><span style="color:#a8bdd2">{{ selMeta.bytes }}</span>
+          <span>client</span><span style="color:#a8bdd2">{{ selMeta.client }}</span>
+        </div>
+      </div>
+      <div style="overflow-y:auto;padding:8px 10px;line-height:1.65">
+        <sc-for list="{{ payloadLines }}" as="ln" hint-placeholder-count="12">
+          <div style="display:flex">
+            <sc-for list="{{ ln.tokens }}" as="tk" hint-placeholder-count="2">
+              <span style="{{ tk.style }}">{{ tk.text }}</span>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid #101823;padding:8px 10px">
+        <div style="color:#42566a;font-size:9px;letter-spacing:.16em;margin-bottom:5px">TOPIC HISTORY · LAST 6</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ history }}" as="h" hint-placeholder-count="6">
+            <div onClick="{{ h.onClick }}" style="display:flex;gap:8px;cursor:pointer;color:#5c7086" style-hover="color:#cfe0f0">
+              <span style="color:#3f5266;font-size:10px">{{ h.time }}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">{{ h.preview }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;tickMs&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:640,&quot;min&quot;:150,&quot;max&quot;:2000,&quot;step&quot;:10,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;showSysTopics&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Simulation&quot;}}">
+const TOPICS = [
+  { path: 'fleet/eu-west/gw-01/status', qos: 1, retain: true, kind: 'status', client: 'gw-01-eu' },
+  { path: 'fleet/eu-west/gw-01/telemetry', qos: 0, retain: false, kind: 'env', client: 'gw-01-eu' },
+  { path: 'fleet/eu-west/gw-01/cmd/ack', qos: 2, retain: false, kind: 'ack', client: 'gw-01-eu' },
+  { path: 'fleet/eu-west/sensor/temp-114', qos: 0, retain: false, kind: 'temp', client: 'esp-114' },
+  { path: 'fleet/eu-west/sensor/temp-115', qos: 0, retain: false, kind: 'temp', client: 'esp-115' },
+  { path: 'fleet/eu-west/sensor/co2-004', qos: 1, retain: false, kind: 'co2', client: 'esp-004' },
+  { path: 'fleet/eu-west/meter/kwh-22', qos: 1, retain: true, kind: 'meter', client: 'meter-22' },
+  { path: 'fleet/us-east/gw-07/status', qos: 1, retain: true, kind: 'status', client: 'gw-07-us' },
+  { path: 'fleet/us-east/gw-07/telemetry', qos: 0, retain: false, kind: 'env', client: 'gw-07-us' },
+  { path: 'fleet/us-east/sensor/temp-208', qos: 0, retain: false, kind: 'temp', client: 'esp-208' },
+  { path: 'fleet/us-east/sensor/door-31', qos: 1, retain: false, kind: 'door', client: 'door-31' },
+  { path: 'fleet/us-east/meter/kwh-09', qos: 1, retain: true, kind: 'meter', client: 'meter-09' },
+  { path: 'fleet/ap-south/gw-12/status', qos: 1, retain: true, kind: 'status', client: 'gw-12-ap' },
+  { path: 'fleet/ap-south/sensor/hum-77', qos: 0, retain: false, kind: 'hum', client: 'esp-077' },
+  { path: 'fleet/ap-south/sensor/vib-03', qos: 2, retain: false, kind: 'vib', client: 'vib-03' },
+  { path: 'ota/manifest/latest', qos: 2, retain: true, kind: 'ota', client: 'ota-svc' },
+  { path: 'ota/progress/gw-07', qos: 1, retain: false, kind: 'otaprog', client: 'gw-07-us' },
+  { path: 'ops/alerts/threshold', qos: 2, retain: false, kind: 'alert', client: 'rules-engine' },
+  { path: 'ops/heartbeat/rules-engine', qos: 0, retain: false, kind: 'hb', client: 'rules-engine' },
+  { path: '$SYS/broker/messages/received', qos: 0, retain: false, kind: 'sys', client: 'nanomq' },
+  { path: '$SYS/broker/clients/connected', qos: 0, retain: false, kind: 'sysc', client: 'nanomq' }
+];
+
+const r = (a, b, d) => { const v = a + Math.random() * (b - a); return d === 0 ? Math.round(v) : +v.toFixed(d === undefined ? 2 : d); };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+function payloadFor(kind, seq) {
+  switch (kind) {
+    case 'status': return { state: pick(['online', 'online', 'online', 'degraded']), fw: '2.7.1-nanomq', rssi: r(-84, -41, 0), uptime_s: 100000 + seq * 7, mem_free_kb: r(1100, 2600, 0) };
+    case 'env': return { t_c: r(18, 27), rh: r(31, 62), pressure_hpa: r(986, 1024, 1), batt_v: r(3.5, 4.2) };
+    case 'temp': return { t_c: r(17.5, 29.4), unit: 'celsius', ts: Date.now(), q: pick(['good', 'good', 'stale']) };
+    case 'co2': return { ppm: r(410, 1180, 0), t_c: r(19, 25), calibrated: true };
+    case 'hum': return { rh: r(38, 78), t_c: r(22, 33), dewpoint_c: r(12, 22) };
+    case 'vib': return { rms_mm_s: r(0.4, 6.8), peak_hz: r(20, 480, 0), axis: pick(['x', 'y', 'z']), alarm: Math.random() > 0.85 };
+    case 'meter': return { kwh_total: r(10400, 10480, 3), p_w: r(120, 3400, 0), pf: r(0.82, 0.99), tariff: pick(['day', 'night']) };
+    case 'door': return { open: Math.random() > 0.6, changed_at: Date.now() - r(0, 900, 0) * 1000, tamper: false };
+    case 'ack': return { cmd_id: 'c-' + (7000 + seq), result: pick(['ok', 'ok', 'timeout']), latency_ms: r(12, 480, 0) };
+    case 'ota': return { version: '2.7.2', size_b: 1843200, sha256: 'a91f…7c02', targets: ['gw-*', 'esp-*'], mandatory: false };
+    case 'otaprog': return { pct: r(0, 100, 0), stage: pick(['download', 'verify', 'apply']), retries: 0 };
+    case 'alert': return { rule: pick(['temp_high', 'co2_high', 'vib_alarm']), severity: pick(['warn', 'crit']), value: r(30, 90, 1), topic: pick(TOPICS).path };
+    case 'hb': return { seq: seq, lag_ms: r(1, 34, 0) };
+    case 'sys': return r(180000, 240000, 0);
+    case 'sysc': return r(138, 148, 0);
+    default: return { v: 1 };
+  }
+}
+
+const chip = on => 'background:' + (on ? '#0d2b33' : 'transparent') + ';border:1px solid ' + (on ? '#1d6b7d' : '#15202c') + ';color:' + (on ? '#7fe9ff' : '#4d6379') + ';font-family:inherit;font-size:9px;letter-spacing:.12em;padding:3px 7px;cursor:pointer';
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const msgs = [];
+    this.seq = 0;
+    for (let i = 0; i < 40; i++) msgs.unshift(this.make(Date.now() - (40 - i) * 420));
+    this.state = {
+      msgs, tab: 'stream', sel: msgs[0].id, scope: null, filter: '',
+      expanded: { 'fleet': true, 'fleet/eu-west': true, 'fleet/us-east': true, 'ota': true, 'ops': true },
+      qos: { 0: true, 1: true, 2: true }, retainedOnly: false, paused: false,
+      spark: Array.from({ length: 40 }, () => r(6, 16, 0)),
+      drops: Array.from({ length: 40 }, () => r(0, 3, 0)),
+      rate: 12, total: 1284391, clock: '', savedIdx: 0,
+      pubTopic: 'fleet/eu-west/gw-01/cmd', pubQos: 1, pubRetain: false, pubStatus: '',
+      pubBody: '{\n  "cmd": "reboot",\n  "delay_s": 5,\n  "reason": "ota-rollback"\n}'
+    };
+  }
+
+  make(ts) {
+    const t = pick(TOPICS);
+    const body = payloadFor(t.kind, this.seq++);
+    const json = typeof body === 'object' ? JSON.stringify(body) : String(body);
+    return { id: 'm' + this.seq.toString().padStart(6, '0'), ts: ts || Date.now(), topic: t.path, qos: t.qos, retain: t.retain && Math.random() > 0.7, body, json, bytes: json.length + 2, client: t.client };
+  }
+
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      const now = new Date();
+      this.setState(s => {
+        const clock = now.toTimeString().slice(0, 8);
+        if (s.paused) return { clock };
+        const n = 1 + (Math.random() > 0.55 ? 1 : 0) + (Math.random() > 0.9 ? 1 : 0);
+        const add = []; for (let i = 0; i < n; i++) add.unshift(this.make());
+        const msgs = add.concat(s.msgs).slice(0, 220);
+        const spark = s.spark.slice(1).concat([r(6, 20, 0)]);
+        const drops = s.drops.slice(1).concat([r(0, 3, 0)]);
+        return { clock, msgs, spark, drops, rate: r(9, 21, 0), total: s.total + n };
+      });
+    }, this.props.tickMs ?? 640);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  fmt(ts) { const d = new Date(ts); return d.toTimeString().slice(0, 8) + '.' + String(d.getMilliseconds()).padStart(3, '0'); }
+  ago(ts) { const s = Math.max(0, Math.round((Date.now() - ts) / 1000)); return s < 60 ? s + 's ago' : Math.round(s / 60) + 'm ago'; }
+  poly(arr, w, h) { const mx = Math.max.apply(null, arr) || 1; return arr.map((v, i) => (i * (w / (arr.length - 1))).toFixed(1) + ',' + (h - (v / mx) * (h - 1)).toFixed(1)).join(' '); }
+
+  tokenize(body) {
+    const src = typeof body === 'object' ? JSON.stringify(body, null, 2) : String(body);
+    const punct = 'color:#2f4256';
+    return src.split('\n').map(line => {
+      const m = line.match(/^(\s*)(?:"([^"]+)"(:\s*))?(.*)$/);
+      const tokens = [];
+      if (m[1]) tokens.push({ text: m[1], style: punct });
+      if (m[2]) { tokens.push({ text: '"' + m[2] + '"', style: 'color:#5ef2ff' }); tokens.push({ text: m[3], style: punct }); }
+      let rest = m[4] || '';
+      let trail = '';
+      const tm = rest.match(/^(.*?)([,\s]*)$/);
+      if (tm) { rest = tm[1]; trail = tm[2]; }
+      let style = 'color:#c8d4e2';
+      if (/^".*"$/.test(rest)) style = 'color:#ff9fe0';
+      else if (/^-?\d/.test(rest)) style = 'color:#b6ff5c';
+      else if (/^(true|false|null)$/.test(rest)) style = 'color:#ffc95e';
+      else if (/^[[\]{}]+$/.test(rest)) style = punct;
+      if (rest) tokens.push({ text: rest, style });
+      if (trail) tokens.push({ text: trail, style: punct });
+      if (!tokens.length) tokens.push({ text: ' ', style: punct });
+      return { tokens: tokens.map(t => ({ text: t.text, style: t.style + ';white-space:pre' })) };
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tab = s.tab;
+    const setTab = t => () => this.setState({ tab: t });
+
+    const tabStyle = t => 'background:' + (tab === t ? '#0d2b33' : 'transparent') + ';border:1px solid ' + (tab === t ? '#1d6b7d' : 'transparent') + ';color:' + (tab === t ? '#7fe9ff' : '#5c7086') + ';font-family:inherit;font-size:10px;letter-spacing:.18em;padding:4px 12px;cursor:pointer';
+
+    // topic tree
+    const nodes = new Map();
+    TOPICS.forEach(t => {
+      const parts = t.path.split('/');
+      let prefix = '';
+      parts.forEach((p, i) => {
+        const parent = prefix;
+        prefix = prefix ? prefix + '/' + p : p;
+        if (!nodes.has(prefix)) nodes.set(prefix, { id: prefix, label: p, depth: i, parent, leaf: i === parts.length - 1, count: 0 });
+      });
+    });
+    s.msgs.forEach(m => { let pfx = ''; m.topic.split('/').forEach(p => { pfx = pfx ? pfx + '/' + p : p; const n = nodes.get(pfx); if (n) n.count++; }); });
+    const q = s.filter.trim().toLowerCase();
+    const treeRows = [];
+    const walk = parent => {
+      Array.from(nodes.values()).filter(n => n.parent === parent).forEach(n => {
+        const match = !q || n.id.toLowerCase().includes(q);
+        const open = q ? true : !!s.expanded[n.id];
+        const active = s.scope === n.id;
+        if (match || q) {
+          if (!q || n.id.toLowerCase().includes(q) || Array.from(nodes.keys()).some(k => k.startsWith(n.id + '/') && k.toLowerCase().includes(q))) {
+            treeRows.push({
+              id: n.id, label: n.label, count: n.count || '',
+              caret: n.leaf ? '·' : (open ? '▾' : '▸'),
+              style: 'display:flex;align-items:center;gap:6px;padding:2px 8px 2px ' + (6 + n.depth * 11) + 'px;cursor:pointer;color:' + (active ? '#7fe9ff' : n.leaf ? '#9fb2c6' : '#6e849a') + ';background:' + (active ? '#0d2b33' : 'transparent') + ';border-left:2px solid ' + (active ? '#5ef2ff' : 'transparent'),
+              dotStyle: n.leaf ? 'width:4px;height:4px;border-radius:50%;flex:none;background:' + (n.count > 6 ? '#4dff9f' : n.count ? '#2f7a5a' : '#233240') : 'width:4px;height:4px;flex:none',
+              onClick: () => this.setState(st => n.leaf ? { scope: st.scope === n.id ? null : n.id } : { expanded: Object.assign({}, st.expanded, { [n.id]: !st.expanded[n.id] }), scope: st.scope === n.id ? null : n.id })
+            });
+          }
+        }
+        if (open) walk(n.id);
+      });
+    };
+    walk('');
+
+    // filtering
+    const showSys = this.props.showSysTopics ?? true;
+    const inScope = m => !s.scope || m.topic === s.scope || m.topic.startsWith(s.scope + '/');
+    const visible = s.msgs.filter(m => inScope(m) && s.qos[m.qos] && (!s.retainedOnly || m.retain) && (showSys || !m.topic.startsWith('$SYS')));
+    const visibleMessages = visible.slice(0, 120).map((m, i) => ({
+      time: this.fmt(m.ts), qos: 'Q' + m.qos, retainMark: m.retain ? 'R' : '·', bytes: m.bytes,
+      topic: m.topic, preview: (typeof m.body === 'object' ? m.json : String(m.body)).slice(0, 90),
+      style: 'display:grid;grid-template-columns:92px 34px 26px 1fr 62px;gap:8px;padding:3px 10px;border-bottom:1px solid #0c1420;cursor:pointer;background:' + (s.sel === m.id ? '#102030' : 'transparent') + ';border-left:2px solid ' + (s.sel === m.id ? '#5ef2ff' : 'transparent') + ';animation:' + (i === 0 && !s.paused ? (s.total % 2 ? 'rowInA' : 'rowInB') + ' .45s ease-out' : 'none'),
+      qosStyle: 'color:' + (m.qos === 2 ? '#ff9fe0' : m.qos === 1 ? '#ffc95e' : '#4d6379'),
+      retainStyle: 'color:' + (m.retain ? '#b6ff5c' : '#22303e'),
+      onClick: () => this.setState({ sel: m.id })
+    }));
+
+    const sel = s.msgs.find(m => m.id === s.sel) || s.msgs[0];
+    const history = s.msgs.filter(m => m.topic === sel.topic).slice(0, 6).map(m => ({
+      time: this.fmt(m.ts).slice(0, 8), preview: m.json.slice(0, 60), onClick: () => this.setState({ sel: m.id })
+    }));
+
+    const topicRows = TOPICS.filter(t => (!q || t.path.toLowerCase().includes(q)) && (showSys || !t.path.startsWith('$SYS'))).map(t => {
+      const mine = s.msgs.filter(m => m.topic === t.path);
+      return {
+        path: t.path, qos: 'Q' + t.qos, retainMark: t.retain ? 'R' : '·',
+        rate: (mine.length * 3) || 0, last: mine.length ? this.ago(mine[0].ts) : '—',
+        spark: this.poly(Array.from({ length: 20 }, () => r(2, 12, 0)), 104, 14),
+        qosStyle: 'color:' + (t.qos === 2 ? '#ff9fe0' : t.qos === 1 ? '#ffc95e' : '#4d6379'),
+        retainStyle: 'color:' + (t.retain ? '#b6ff5c' : '#22303e'),
+        style: 'display:grid;grid-template-columns:1fr 42px 34px 66px 104px 78px;gap:8px;padding:4px 10px;border-bottom:1px solid #0c1420;cursor:pointer;align-items:center;background:' + (s.scope === t.path ? '#102030' : 'transparent'),
+        onClick: () => this.setState(st => ({ scope: st.scope === t.path ? null : t.path, tab: 'stream' }))
+      };
+    });
+
+    const clients = [
+      ['gw-01-eu', '10.42.7.11:51422', 24, '18k/4k', '60s', 'CONN'], ['gw-07-us', '10.88.2.4:44190', 31, '22k/6k', '60s', 'CONN'],
+      ['gw-12-ap', '10.11.9.30:38221', 19, '9k/2k', '60s', 'CONN'], ['esp-114', '10.42.7.114:49001', 2, '4k/128', '30s', 'CONN'],
+      ['esp-115', '10.42.7.115:49020', 2, '4k/131', '30s', 'CONN'], ['esp-004', '10.42.7.4:49102', 3, '2k/96', '30s', 'CONN'],
+      ['esp-208', '10.88.2.208:50110', 2, '3k/104', '30s', 'FLAP'], ['esp-077', '10.11.9.77:50880', 2, '3k/110', '30s', 'CONN'],
+      ['meter-22', '10.42.7.22:47733', 1, '1k/40', '120s', 'CONN'], ['meter-09', '10.88.2.9:47740', 1, '1k/38', '120s', 'IDLE'],
+      ['door-31', '10.88.2.31:46012', 1, '820/22', '45s', 'CONN'], ['vib-03', '10.11.9.3:46980', 1, '6k/74', '30s', 'CONN'],
+      ['rules-engine', '10.0.0.9:33101', 96, '140k/88k', '15s', 'CONN'], ['ota-svc', '10.0.0.14:33440', 12, '31k/2k', '15s', 'CONN']
+    ].map(c => ({
+      id: c[0], addr: c[1], subs: c[2], io: c[3], keepalive: c[4], state: c[5],
+      stateStyle: 'text-align:right;color:' + (c[5] === 'CONN' ? '#4dff9f' : c[5] === 'FLAP' ? '#ff5ec8' : '#ffc95e')
+    }));
+
+    const savedRaw = [['fleet/+/sensor/#', 412], ['$SYS/broker/#', 88], ['ota/progress/+', 24], ['fleet/+/+/cmd/ack', 61]];
+    const savedFilters = savedRaw.map((f, i) => ({
+      expr: f[0], hits: f[1],
+      style: 'display:flex;justify-content:space-between;gap:6px;padding:3px 6px;border:1px solid ' + (s.filter === f[0] ? '#1d6b7d' : '#131c26') + ';color:' + (s.filter === f[0] ? '#7fe9ff' : '#7d92a7') + ';cursor:pointer;background:' + (s.filter === f[0] ? '#0d2b33' : 'transparent'),
+      onClick: () => this.setState(st => ({ filter: st.filter === f[0] ? '' : f[0] }))
+    }));
+
+    const alerts = [
+      ['temp_high · > 28°C 5m', 'FIRING', '#ff5ec8'], ['co2_high · > 1000ppm', 'ARMED', '#4dff9f'],
+      ['gw offline · no hb 90s', 'ARMED', '#4dff9f'], ['vib_alarm · rms > 6', 'MUTED', '#5c7086']
+    ].map(a => ({
+      name: a[0], state: a[1],
+      dotStyle: 'width:5px;height:5px;border-radius:50%;flex:none;color:' + a[2] + ';background:' + a[2] + (a[1] === 'FIRING' ? ';animation:blip 1s ease-in-out infinite' : ''),
+      badgeStyle: 'font-size:9px;letter-spacing:.1em;color:' + a[2]
+    }));
+
+    const qosChips = [0, 1, 2].map(n => ({
+      label: 'QOS ' + n, style: chip(s.qos[n]),
+      onClick: () => this.setState(st => ({ qos: Object.assign({}, st.qos, { [n]: !st.qos[n] }) }))
+    }));
+    const pubQosChips = [0, 1, 2].map(n => ({ label: String(n), style: chip(s.pubQos === n), onClick: () => this.setState({ pubQos: n }) }));
+
+    return {
+      clock: s.clock, uptime: '31d 04:12', rate: s.rate, total: s.total.toLocaleString('en-US'),
+      topicCount: TOPICS.length * 12, inflight: 34, queued: 512,
+      sparkRate: this.poly(s.spark, 96, 20), sparkDrop: this.poly(s.drops, 96, 20),
+      goStream: setTab('stream'), goTopics: setTab('topics'), goClients: setTab('clients'), goPublish: setTab('publish'),
+      tabStyleStream: tabStyle('stream'), tabStyleTopics: tabStyle('topics'), tabStyleClients: tabStyle('clients'), tabStylePublish: tabStyle('publish'),
+      isStream: tab === 'stream', isTopics: tab === 'topics', isClients: tab === 'clients', isPublish: tab === 'publish',
+      treeRows, savedFilters, alerts, qosChips, clients, topicRows, visibleMessages, history,
+      filter: s.filter, onFilter: e => this.setState({ filter: e.target.value }),
+      scopeLabel: s.scope ? '▸ ' + s.scope : '▸ ALL TOPICS',
+      shownCount: visible.length,
+      retainedStyle: chip(s.retainedOnly), toggleRetained: () => this.setState(st => ({ retainedOnly: !st.retainedOnly })),
+      clearLog: () => this.setState({ msgs: [] }),
+      pauseLabel: s.paused ? '▶ RESUME' : '❚❚ PAUSE',
+      pauseStyle: 'background:' + (s.paused ? '#3a1230' : '#0d2b33') + ';border:1px solid ' + (s.paused ? '#7d1d5e' : '#1d6b7d') + ';color:' + (s.paused ? '#ff9fe0' : '#7fe9ff') + ';font-family:inherit;font-size:9px;letter-spacing:.14em;padding:3px 10px;cursor:pointer',
+      togglePause: () => this.setState(st => ({ paused: !st.paused })),
+      selMeta: { id: sel.id, topic: sel.topic, time: this.fmt(sel.ts), qos: sel.qos, retain: sel.retain ? 'true' : 'false', bytes: sel.bytes + ' B', client: sel.client },
+      payloadLines: this.tokenize(sel.body),
+      pubTopic: s.pubTopic, onPubTopic: e => this.setState({ pubTopic: e.target.value }),
+      pubBody: s.pubBody, onPubBody: e => this.setState({ pubBody: e.target.value }),
+      pubBytes: s.pubBody.length, pubQosChips,
+      pubRetainStyle: chip(s.pubRetain), togglePubRetain: () => this.setState(st => ({ pubRetain: !st.pubRetain })),
+      pubStatus: s.pubStatus,
+      doPublish: () => this.setState(st => ({ pubStatus: '✓ sent · packet 0x' + (0x4a10 + st.total % 200).toString(16) + ' · qos' + st.pubQos, tab: 'publish' }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>
